@@ -1644,7 +1644,8 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											m_clEmTime.TimeOff();
 											LOG(ERROR,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 											memset(remoteBuffer,0,_8KBLEN);
-											remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
+											//remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
+											remoteSocket->TcpRead(remoteBuffer,_8KBLEN);	
 											m_clEmTime.TimeOff();
 											LOG(ERROR,"read from  dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 											if( strlen(remoteBuffer) > 0 )
