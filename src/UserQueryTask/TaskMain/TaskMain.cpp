@@ -231,22 +231,23 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 	memset(bufTemp, 0, PACKET);
 
 	m_clEmTime.TimeOn();
-	
+	//printf("Line:%d,BdxGetTaskFd()=%d\n",__LINE__,BdxGetTaskFd());	
 	iRes = m_pclSock->TcpRead(m_pszAdxBuf, _8KBLEN);
   	LOG(DEBUG,"Requrest= %s\n",m_pszAdxBuf);  
-	printf("Requrest= %s\n",m_pszAdxBuf);  
+	//printf("Requrest= %s\n",m_pszAdxBuf);  
 	if(iRes <= (int)http.length()) 
-	{		
+	{	m_httpType = 1;		
+	  	
 		LOG(DEBUG, "[thread: %d]Read Socket Error [%d].", m_uiThreadId, iRes);
+		stResponseInfo.mResValue="error";
 		errorMsg="E0004";
-		return LINKERROR;
+		return 0;
+		//return -1;
 	}
-
 	std::string ssContent = std::string(m_pszAdxBuf);
 	std::string tempssContent;
 	unsigned int ipos = ssContent.find(CTRL_N,0);
 	unsigned int jpos = ssContent.find(REQ_TYPE,0);
-
 	if( std::string::npos !=jpos )
 	{
 		m_httpType = 1;
@@ -288,7 +289,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 				ssContent = ssContent.substr(ibegin+1,iend - ibegin-1);	
 				reqParams = ssContent;
 				retParams = reqParams;
-				printf("reqParams=%s\n",reqParams.c_str());
+				//printf("reqParams=%s\n",reqParams.c_str());
 				memcpy(bufTemp,ssContent.c_str(),ssContent.length());
 				buf=bufTemp;
 				while((temp[index] = strtok_r(buf, STRING_AND, &outer_ptr))!=NULL)   
@@ -355,15 +356,15 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 								{
 									isQueryAction = 1;
 								}
-							    	printf("Line:%d,isQueryAction=%d\n",__LINE__,isQueryAction); 
-								printf("strKeyFilter=========++++=%s\n",strKeyFilter.c_str());
+							    	//printf("Line:%d,isQueryAction=%d\n",__LINE__,isQueryAction); 
+								//printf("strKeyFilter=========++++=%s\n",strKeyFilter.c_str());
 								strKeyFilter = url_decode(strKeyFilter.c_str());
 								tempstrKeyFilter=strKeyFilter;
-								printf("strKeyFilter=========++++=%s\n",strKeyFilter.c_str());
+								//printf("strKeyFilter=========++++=%s\n",strKeyFilter.c_str());
 								if(!jReader->parse(strKeyFilter, jValue))
 								{ 
 									errorMsg = "E0006"; // json data format is wrong
-									printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+									//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 									stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 									m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 									delete jReader;
@@ -378,13 +379,13 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									
 								}
 
-								printf("strKeyFilter=%s\n",strKeyFilter.c_str());
+								//printf("strKeyFilter=%s\n",strKeyFilter.c_str());
 								unsigned int ipos = strKeyFilter.rfind("]",-1);
 								unsigned int jpos = strKeyFilter.rfind("[",-1);
-								printf("ipos=%d,jpos=%d\n",ipos,jpos);
+								//printf("ipos=%d,jpos=%d\n",ipos,jpos);
 
 								strKeyFilter=strKeyFilter.substr(jpos+1,ipos-jpos-1);
-								printf("strKeyFilter=%s\n",strKeyFilter.c_str());
+								//printf("strKeyFilter=%s\n",strKeyFilter.c_str());
 								char *token;
 								char *temptoken=NULL;
 								//char temptoken[50];
@@ -401,9 +402,9 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 								
 								token = strtok_r( buf2,",",&outer_ptr );
 								temptoken=token;
-								printf( "token 11111 %s\n", token );
+								//printf( "token 11111 %s\n", token );
 								//temptoken= const_cast< char*>(BdxTaskMainReplace_All(std::string(temptoken),std::string("\""),std::string("")).c_str());
-								printf( "temptoken 11111 %s\n", temptoken );
+								//printf( "temptoken 11111 %s\n", temptoken );
 								mapActionFilter.clear();
 								mapActionFilter[std::string(temptoken)]=0;
 								while( token != NULL )
@@ -411,13 +412,13 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 								     
 								      /* Get next token: */
 								      token = strtok_r( NULL,",",&outer_ptr );
-								      printf( "token 22222 %s\n", token);
+								      //printf( "token 22222 %s\n", token);
 
 								      if(token!=NULL)
 								      {	
 								       temptoken=token;
 								       //temptoken= const_cast< char*>(BdxTaskMainReplace_All(std::string(temptoken),std::string("\""),std::string("")).c_str());
-								       printf( "temptoken 22222 %s\n", temptoken );
+								       //printf( "temptoken 22222 %s\n", temptoken );
 										mapActionFilter[std::string(temptoken)]=0;
 								      }
 								      
@@ -430,7 +431,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									{
 										errorMsg = "E0011"; // filter include  no right field
 										
-										printf("line %d,s it->first=%s,Error: %s\n",__LINE__,it->first.c_str(),errorMsg.c_str());
+										//printf("line %d,s it->first=%s,Error: %s\n",__LINE__,it->first.c_str(),errorMsg.c_str());
 										stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 										m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 										delete jReader;
@@ -456,7 +457,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 							     else
 							     {
 									errorMsg ="E0004"; //param missing or error
-									printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+									//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 									stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 									m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 									//++
@@ -479,7 +480,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 								else
 								{								
 									errorMsg = "E0000";  // request info is error  
-									printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+									//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 									stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 									m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 									//++
@@ -490,7 +491,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 							else
 							{
 								errorMsg = "E0003"; //passwd not match
-								printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+								//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 								stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 								m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 								//++
@@ -502,7 +503,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 						else
 						{
 							errorMsg ="E0002"; //user is not exists
-							printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+							//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 							stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 							m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 							//++
@@ -513,7 +514,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 					else
 					{
 							errorMsg ="E0004"; //param missing or error
-							printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+							//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 							stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 							m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 							//++
@@ -615,7 +616,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 						if(atoi(ssmoidValue.c_str())> g_mapUserInfo.find(strUser)->second.mIntQueryTimes)
 						{
 							errorMsg = "E0005";//user query times limit
-							printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+							//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 							stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 							m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 							delete jReader;
@@ -653,7 +654,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 						if(m_pGoodsRedis->UserGet(ssContent,ssmoidValue))
 						{	
 							LOG(DEBUG,"ssmoidValue=%s",ssmoidValue.c_str());
-							printf("ssmoidValue=%s\n",ssmoidValue.c_str());
+							//printf("ssmoidValue=%s\n",ssmoidValue.c_str());
 							stResponseInfo.mResValue = ssmoidValue ;
 							m_pGoodsRedis->UserIncr(stResponseInfo.ssUserCountKeyRes); 
 							//CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssUserName].m_ullResNum++;
@@ -666,7 +667,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 							//m_pGoodsRedis->UserIncr(stResponseInfo.ssUserCountKeyEmptyRes); 
 							//CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssUserName].m_ullEmptyResNum++;
 							ssContent="REAL_"+ssContent;
-							printf("ssContent=%s\n",ssContent.c_str());
+							//printf("ssContent=%s\n",ssContent.c_str());
 							m_pGoodsRedis->UserPut(ssContent,"1");
 							errorMsg = "E0001";
 							delete jReader;
@@ -691,20 +692,20 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 						if(m_pDataRedis->UserGet(ssContent,ssmoidValue)&&(strKeyType!="M"&&strOperator!="ctc"))
 						{	
 							LOG(DEBUG,"ssmoidValue=%s",ssmoidValue.c_str());
-							printf("line:%d,ssmoidValue=%s\n",__LINE__,ssmoidValue.c_str());
+							//printf("line:%d,ssmoidValue=%s\n",__LINE__,ssmoidValue.c_str());
 							if(!m_pDataRedis->UserGet(ssmoidValue,stResponseInfo.mResValue))
 							{
 								iNoDataFlag = 1;
 
 							}
 							LOG(DEBUG,"stResponseInfo.mResValue=%s",stResponseInfo.mResValue.c_str());
-							printf("stResponseInfo.mResValue=%s\n",stResponseInfo.mResValue.c_str());
+							//printf("stResponseInfo.mResValue=%s\n",stResponseInfo.mResValue.c_str());
 
 							
 							if(!jReader->parse(stResponseInfo.mResValue, jValue))
 							{ 
 								errorMsg = "E0006"; // json data format is wrong
-								printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+								//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 								stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;
 								m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 								delete jReader;
@@ -722,7 +723,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									{
 											for(std::map<string,int>::iterator it=mapActionFilter.begin();it!=mapActionFilter.end();it++)
 											{
-												printf("jValue[i][\"typeid\"]=%s\n",jValue[i]["typeid"].asString().c_str());
+												//printf("jValue[i][\"typeid\"]=%s\n",jValue[i]["typeid"].asString().c_str());
 												if( (jValue[i]["typeid"] == it->first)||(jValue[i]["typeid"] == "time") )
 												{
 													if(it->second!=1)
@@ -869,7 +870,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 
 				#endif
 
-			printf("iNoDataFlag=%d,isExpire=%d\n",iNoDataFlag,isExpire);
+			//printf("iNoDataFlag=%d,isExpire=%d\n",iNoDataFlag,isExpire);
 			LOG(DEBUG,"iNoDataFlag=%d,isExpire=%d",iNoDataFlag,isExpire); 
 			#if 1
 			#define __ZJYD__
@@ -879,12 +880,12 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 				std::string remoteIp;
 				uint16_t remotePort;
 				string key;
-				printf("strProvince=%s\n",strProvince.c_str());
+				//printf("strProvince=%s\n",strProvince.c_str());
 				if( (iNoDataFlag == 1 || isExpire == 1)&&(!strProvince.empty())/*&&atoi(strKeyType.c_str())=1*/)
 				{
 						//if( atoi(strKeyType.c_str())!=6) 
 						if( strKeyType!="M") 
-						{
+				{
 							strKeyFilter= tempstrKeyFilter;
 						}
 						
@@ -945,13 +946,13 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 						if(strKeyTypeList.find(strKeyType.c_str())==std::string::npos)
 						{
 							errorMsg = "E0004";
-							printf("Line:%d,strKeyType %sis not exists\n",__LINE__,strProvince.c_str());
+							//printf("Line:%d,strKeyType %sis not exists\n",__LINE__,strProvince.c_str());
 							LOG(DEBUG,"strKeyType %s is not exists\n",strProvince.c_str());
 							delete jReader;
 							return ERRORNODATA;
 						}
 						int temp = iQueryCategory;
-						printf("line: %d,iQueryCategory=%d\n",__LINE__,iQueryCategory);
+						//printf("line: %d,iQueryCategory=%d\n",__LINE__,iQueryCategory);
 						//for(std::map<std::string,QUERYAPIINFO_S>::iterator it=g_vecUrlAPIS.begin();it!=g_vecUrlAPIS.end();)
 						std::map<std::string,QUERYAPIINFO_S>::iterator it=g_vecUrlAPIS.begin();	
 						{			
@@ -962,7 +963,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 								if(strProvinceList.find(strProvince.c_str())==std::string::npos&&strProvince!="MIXXXX")
 								{
 									errorMsg = "E0004";
-									printf("Line:%d,strProvince %sis not exists\n",__LINE__,strProvince.c_str());
+									//printf("Line:%d,strProvince %sis not exists\n",__LINE__,strProvince.c_str());
 									LOG(DEBUG,"strProvince %s is not exists\n",strProvince.c_str());
 									delete jReader;
 									return ERRORNODATA;
@@ -980,8 +981,8 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 							}
 
 							iQueryCategory = temp;
-							printf("Line:%d,iQueryCategory=%d\n",__LINE__,iQueryCategory);
-							printf("Line:%d,it->second.mProvince=%s\n",__LINE__,it->second.mProvince.c_str());
+							//printf("Line:%d,iQueryCategory=%d\n",__LINE__,iQueryCategory);
+							//printf("Line:%d,it->second.mProvince=%s\n",__LINE__,it->second.mProvince.c_str());
 							if(it!=g_vecUrlAPIS.end())
 							{
 							switch(iQueryCategory)
@@ -1138,7 +1139,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 												m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 
 												errorMsg = "E0007";
-												printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+												//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 												stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
 												m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 												m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyEmptyRes);
@@ -1232,7 +1233,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											//key="dsp_name="+strUser+"&cond=default&pidfa="+strKey;
 											key="dsp_name="+strUser+"&sladuid="+strKey+"&filter="+strKeyFilter;
 										}
-										printf("thread: %d key=%s\n",m_uiThreadId,key.c_str());
+										//printf("thread: %d key=%s\n",m_uiThreadId,key.c_str());
 										//pthread_rwlock_wrlock(&p_rwlock);
 										string strEncrpytKey;
 
@@ -1492,9 +1493,15 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											  	//return SUCCESS; 		
 									}
 										break;
-								case 4:				
+								case 4:		
+	long int st1,st2,st3,st4;
+long int ut1,ut2,ut3,ut4;		
 									m_clEmTime.TimeOff();
-									LOG(DEBUG,"before link dianxin [thread: %d],[second: %d, Microsecond: %d]",m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+                                                                                 st1=m_clEmTime.TimeGetSeconds();
+                                                                                 ut1=m_clEmTime.TimeGetMicSeconds();
+
+									//printf("Line:%d,%ld,before link dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+									LOG(ERROR,"before link dianxin [thread: %d],[second: %d, Microsecond: %d]",m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 									//if((it->second.mProvince == atol(strProvince.c_str())||strProvince == "null"||strProvince==""))
 									if((it->second.mProvince == strProvince)&&(it->second.mCarrierOperator ==strOperator))
 									{									
@@ -1566,7 +1573,6 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 
 									strMd5Pass = BdxGetParamSign(strPassWord,"");
 									std::transform(strMd5Pass.begin(),strMd5Pass.end(),strMd5Pass.begin(),::tolower);
-									printf("Line:%d,strMd5Pass=%s\n",__LINE__,strMd5Pass.c_str());
 									int queryTimes=1;
 
 									Label:
@@ -1574,20 +1580,17 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									if(queryTimes==1)
 									{
 										strSeed = BdxTaskMainGetDate();
-										printf("Line:%d,1+++++strSeed=%s\n",__LINE__,strSeed.c_str());
 										queryTimes++;
 										
 									}
 									else if(queryTimes==2)
 									{
 										strSeed = BdxTaskMainGetNextDate();
-										printf("Line:%d,2+++++strSeed=%s\n",__LINE__,strSeed.c_str());
 										queryTimes++;
 									}
 									else if(queryTimes==3)
 									{
 										strSeed = BdxTaskMainGetLastDate();
-										printf("Line:%d,3+++++strSeed=%s\n",__LINE__,strSeed.c_str());
 										queryTimes++;
 									}
 
@@ -1595,7 +1598,6 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									strSign = "ref=" + strRef +"&password=" + strMd5Pass + "&seed=" + strSeed;
 									strSign = BdxGetParamSign(strSign,"");
 									std::transform(strSign.begin(),strSign.end(),strSign.begin(),::tolower);
-									printf("Line:%d,strSign=%s\n",__LINE__,strSign.c_str());
 									stResponseInfo.ssOperatorNameKeyReq = strProvinceReq + strKeyType +"_"+ BdxTaskMainGetTime();
 									stResponseInfo.ssOperatorNameKeyRes = strProvinceRes + strKeyType+"_" + BdxTaskMainGetTime();
 									m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReq);
@@ -1603,14 +1605,12 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									stResponseInfo.ssOperatorNameKeyEmptyRes = strProvinceEmptyRes + strKeyType +"_"+ BdxTaskMainGetTime();
 									CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullReqNum++;
 									
-										printf("thread: %d key=%s\n",m_uiThreadId,key.c_str());
 										//pthread_rwlock_wrlock(&p_rwlock);
 										string strEncrpytKey;
 
 										strEncrpytKey = std::string(it->second.mParam)+strRef + "/"+strSign+"?key="+key;	
 										
 										sprintf(m_httpReq,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n",strEncrpytKey.c_str(),it->first.c_str());
-										printf("%s\n",m_httpReq);
 										LOG(DEBUG,"m_httpReq=%s",m_httpReq);
 										remoteIp.assign(it->first,0,it->first.find(":",0));
 										remotePort = atoi(it->first.substr(it->first.find(":",0)+1).c_str());
@@ -1627,6 +1627,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 											
 											errorMsg = "E0007";
+											LOG(ERROR,"connect remote api error ,[thread: %d],errorCode %s ",m_uiThreadId,errorMsg.c_str());
 											printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 											stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
 											m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
@@ -1638,25 +1639,40 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											return ERRORNODATA;
 										}
 										m_clEmTime.TimeOff();
-										LOG(DEBUG,"connect dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+										st2=m_clEmTime.TimeGetSeconds();
+										ut2=m_clEmTime.TimeGetMicSeconds();
+					//printf("Line:%d,current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st2-st1,ut2-ut1);	
+										//printf("Line:%d,%ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+										LOG(ERROR,"current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st2-st1,ut2-ut1);
+										//LOG(ERROR,"connect dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 										if(remoteSocket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
 										{
 											m_clEmTime.TimeOff();
-											LOG(DEBUG,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+                                                                                st3=m_clEmTime.TimeGetSeconds();
+                                                                                ut3=m_clEmTime.TimeGetMicSeconds();
+											//printf("Line:%d,current time : %ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st3-st2,ut3-ut2);
+											//printf("Line:%d,%ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+											LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st3-st2,ut3-ut2);
+											//LOG(ERROR,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 											memset(remoteBuffer,0,_8KBLEN);
 											//remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
 											remoteSocket->TcpRead(remoteBuffer,_8KBLEN);	
 											m_clEmTime.TimeOff();
-											LOG(DEBUG,"read from  dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+                                                                                st4=m_clEmTime.TimeGetSeconds();
+                                                                                ut4=m_clEmTime.TimeGetMicSeconds();
+	//printf("Line:%d,current time : %ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st4-st3,ut4-ut3);
+											//printf("Line:%d,%ld,read   from dianxin [thread: %d],[second: %d, Microsecond: %d]\n\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+											LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
+											//LOG(ERROR,"read from  dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 											if( strlen(remoteBuffer) > 0 )
 											{					
 												
 												mResValueRemote = std::string(remoteBuffer);	
-												printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
+												//printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
 												LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
 												stResponseInfo.mResValue = std::string(remoteBuffer);
 												signError = "\"code\":500,\"status\":\"FAIL\",\"message\":\"SAuthRss : Sign is wrong";
-												printf("queryTimes=%d\n",queryTimes);
+												//printf("queryTimes=%d\n",queryTimes);
 												if(queryTimes<=3&&stResponseInfo.mResValue.find(signError)!=std::string::npos)
 												{
 													
@@ -1944,8 +1960,8 @@ HIVELOCALLOG_S stHiveLog;
 	//{
 		//stHiveLog.pop();
 	//}
-	printf("Line:%d,stResponseInfo.mResValue++++++++++++++++=%s\n",__LINE__,stResponseInfo.mResValue.c_str());
-	printf("Line:%d,mResValueRemote++++++++=%s\n",__LINE__,mResValueRemote.c_str());
+	//printf("Line:%d,stResponseInfo.mResValue++++++++++++++++=%s\n",__LINE__,stResponseInfo.mResValue.c_str());
+	//printf("Line:%d,mResValueRemote++++++++=%s\n",__LINE__,mResValueRemote.c_str());
 	if(( iNoDataFlag == 1 || isExpire == 1)&&(strKeyType!="M"&&strProvince!="MIXXXX"))
 	{
 		lenStrTemp = mResValueRemote.length();
@@ -2319,9 +2335,9 @@ HIVELOCALLOG_S stHiveLog;
 		{
 			stResponseInfo.mResValue = stResponseInfo.mResValue.substr(mResValueRemote.find("\r\n\r\n")+4,lenStrTemp -(stResponseInfo.mResValue.find("\r\n\r\n")+4));
 		}
-		printf("Line:%d,stResponseInfo.mResValue=%s\n",__LINE__,stResponseInfo.mResValue.c_str());
+		//printf("Line:%d,stResponseInfo.mResValue=%s\n",__LINE__,stResponseInfo.mResValue.c_str());
 		//stResponseInfo.mResValue = mResValueLocal;
-		printf("reqParams=%s\n",reqParams.c_str());
+		//printf("reqParams=%s\n",reqParams.c_str());
 		stHiveLog.strProvider=strOperator;
 		stHiveLog.strProvince=strProvince;
 		stHiveLog.strLogValue=stResponseInfo.mResValue;
@@ -2811,7 +2827,7 @@ int CTaskMain::BdxSendEmpyRespones(std::string errorMsg)
 	memcpy(pszDataBuf + iHeadLen, strOutput.c_str(), strOutput.length());
 	LOG(DEBUG,"Thread : %d ,AdAdxSendEmpyRespones=%s\n",m_uiThreadId,pszDataBuf);
 	if(!m_pclSock->TcpWrite(pszDataBuf, iHeadLen + strOutput.length())) {
-		LOG(ERROR, "[tread: %d]write empty response data error.", m_uiThreadId);
+		//LOG(ERROR, "[tread: %d]write empty response data error.", m_uiThreadId);
 		return LINKERROR;
 	}
 
@@ -2839,7 +2855,7 @@ int CTaskMain::BdxSendRespones(BDXREQUEST_S& stRequestInfo, BDXRESPONSE_S& stAdx
 	int iBodyLength = strlen(m_pszAdxResponse);
 	iBodyLength=strlen(m_pszAdxResponse);
 
-
+	//printf("Line:%d,BdxGetTaskFd()=%d\n",__LINE__,BdxGetTaskFd());
 
 	if(!m_pclSock->TcpWrite(m_pszAdxResponse, iBodyLength)) 
 	{
@@ -2850,9 +2866,12 @@ int CTaskMain::BdxSendRespones(BDXREQUEST_S& stRequestInfo, BDXRESPONSE_S& stAdx
 			m_pDataRedis->UserIncr(stAdxRes.ssUserCountKeyRes);
 
 		}
-		LOG(ERROR, "[thread: %d]write  response error.", m_uiThreadId);
+		//printf("Line:%d,BdxGetTaskFd()=%d\n",__LINE__,BdxGetTaskFd());
+		//printf("Line:%d,writing error\n",__LINE__);
 		return LINKERROR;
 	}
+	//printf("Line:%d,BdxGetTaskFd()=%d\n",__LINE__,BdxGetTaskFd());
+ 	//printf("Line:%d,writing ok\n",__LINE__);
 
 	CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stAdxRes.ssUserName].m_ullResNum++;
 	CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stAdxRes.ssUserName].m_ullTotalResNum++;
@@ -3096,7 +3115,7 @@ std::string CTaskMain::BdxGetParamSign(const std::string& strParam, const std::s
 {
 	char pszMd5Hex[33];
 	std::string strParamKey = strParam + strSign;
-	printf("Line:%d,strParamKey=%s\n",__LINE__,strParamKey.c_str());
+	//printf("Line:%d,strParamKey=%s\n",__LINE__,strParamKey.c_str());
 
     //计算参数串的128位MD5
     m_clMd5.Md5Init();
