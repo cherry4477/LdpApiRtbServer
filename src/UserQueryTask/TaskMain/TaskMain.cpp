@@ -1509,7 +1509,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
                                     ut1=m_clEmTime.TimeGetMicSeconds();
 
 									//printf("Line:%d,%ld,before link dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-									LOG(ERROR,"before link dianxin [thread: %d],[second: %d, Microsecond: %d]",m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+									//LOG(ERROR,"before link dianxin [thread: %d],[second: %d, Microsecond: %d]",m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 									//if((it->second.mProvince == atol(strProvince.c_str())||strProvince == "null"||strProvince==""))
 									if((it->second.mProvince == strProvince)&&(it->second.mCarrierOperator ==strOperator))
 									{									
@@ -1631,7 +1631,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											{
 												if(	itr->m_bStatus	==	true )
 												{	
-													printf("Line:%d,Thread:%d,find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													printf("Line:%d,Thread:[ %5d ],find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
 													itr->m_bStatus	=	false;
 													//totalConnectPool--;
 													break;
@@ -1643,12 +1643,13 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 										{
 											if(itr->socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
 											{		
-													//printf("Line:%d,Thread:%d,m_vevtorConnectPool...socket [%d]....write\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													printf("Line:%d,Thread:%d,m_vevtorConnectPool...socket [%d]....write\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													LOG(ERROR,"[thread: %d],write ok",m_uiThreadId);
 													m_clEmTime.TimeOff();
 													ut3=m_clEmTime.TimeGetMicSeconds();
 													//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st3-st2,ut3-ut2);
 													//printf("Line:%d,%ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-													LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st3-st2,ut3-ut2);
+													//LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st3-st2,ut3-ut2);
 													//LOG(ERROR,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 													memset(remoteBuffer,0,_8KBLEN);
 													//remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
@@ -1659,14 +1660,16 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 													ut4=m_clEmTime.TimeGetMicSeconds();
 													//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st4-st3,ut4-ut3);
 													//printf("Line:%d,%ld,read	 from dianxin [thread: %d],[second: %d, Microsecond: %d]\n\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-													LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
+													//LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
 													//LOG(ERROR,"read from	dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+													LOG(ERROR,"[thread: %d],remoteBuffer=%s",m_uiThreadId,remoteBuffer);
 													if( strlen(remoteBuffer) > 0 )
 													{					
 														
 														mResValueRemote = std::string(remoteBuffer);	
-														//printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
-														LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
+														printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
+														//LOG(ERROR,"[thread: %d],remoteBuffer=%s",m_uiThreadId,remoteBuffer);
+														//LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
 														stResponseInfo.mResValue = std::string(remoteBuffer);
 														signError = "\"code\":500,\"status\":\"FAIL\",\"message\":\"SAuthRss : Sign is wrong";
 														//printf("queryTimes=%d\n",queryTimes);
@@ -1697,7 +1700,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 														
 														errorMsg = "E0007";
-														printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+														//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 														stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
 														m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyEmptyRes);
@@ -1709,6 +1712,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											}
 											else
 											{
+												LOG(ERROR,"[thread: %d],write error",m_uiThreadId);
 												itr->m_bStatus = true;	
 												//totalConnectPool++;
 												delete jReader;						
@@ -1719,6 +1723,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 										else
 										{							
 											printf("Line:%d,connect pool is not enough....\n",__LINE__);
+											LOG(ERROR,"[thread: %d],connect pool is not enough",m_uiThreadId);
 											remoteSocket=new CTcpSocket(remotePort,remoteIp);
 											if(remoteSocket->TcpConnect()!=0)
 											{						
