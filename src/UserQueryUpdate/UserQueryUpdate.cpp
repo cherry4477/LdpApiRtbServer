@@ -14,6 +14,8 @@ extern std::string strConfigFileName;
 pthread_rwlock_t p_rwlock;
 pthread_rwlockattr_t p_rwlock_attr;
 pthread_mutex_t mutex;
+pthread_mutex_t connectPoolMutex;
+
 std::string g_strTokenString = "";
 u_int  g_iNeedUpdateToken = 0;
 extern u_int  InitSSLFlag ;
@@ -27,6 +29,12 @@ extern	string m_strRcptTo;
 extern	string m_strSubject;
 extern	string m_strErrorMsg;
 	
+#define __CONECT_POOL__
+extern int InitConnectPool ;
+extern int totalConnectPool;
+extern std::vector<TASKCONNECT_S> m_vevtorConnectPool;
+extern TASKCONNECT_S taskConnectPool;
+extern u_int m_uiTotalThreadsNum;
 
 
 std::map<std::string,BDXPERMISSSION_S> g_mapUserInfo;
@@ -484,8 +492,7 @@ void CUserQueryUpdate::MonitorRemoteApiWangGuan()
 }
 void CUserQueryUpdate::Core()
 {
-
-	std::string strToken,strTokenValue;
+	std::string strToken,strTokenValue,strReceiveBuffer;
 	Json::Value jValue,jRoot,jResult;
 	Json::Reader jReader;
 	Json::FastWriter jFastWriter;
@@ -496,7 +503,11 @@ void CUserQueryUpdate::Core()
 	std::string strUserName;
 	int times = 0;
 	std::map<std::string,BDXPERMISSSION_S> temp_mapUserInfo;
-	
+
+	std::string httpDianxinGet="/bdapi/restful/fog/asia/getSingleUserTags/ctyun_bdcsc_asia/1ebb3c5d8a574e74b2e6156a5c010cba.json?key=uid_m310001_3_1_20160315&tablename=vendoryx_2";
+	char m_httpReq[_8KBLEN],remoteBuffer[_8KBLEN];
+	memset(m_httpReq, 0, _8KBLEN);
+		
 	while(true)
 	{
 		times=1;	
@@ -527,9 +538,80 @@ void CUserQueryUpdate::Core()
 		//MonitorRemoteApiHuaWei();
 									
 		#endif //__MONITOR_API__
-		
+
+	#ifdef __CONECT_POOL__
+			pthread_mutex_lock (&connectPoolMutex);
+			//printf("Line:%d,,InitConnectPool=%d,totalConnectPool=%d\n",__LINE__,InitConnectPool,totalConnectPool);
+			if ( InitConnectPool == 0 )
+			{
+				for(int i = 0 ;i< m_uiTotalThreadsNum;i++)
+				{
+					
+					//CTcpSocket *socket;
+					taskConnectPool.socket = new CTcpSocket(8080,std::string("111.235.158.136"));
+					if(taskConnectPool.socket->TcpConnect()==0)
+					{	
+						printf("Line:%d,connecting....\n",__LINE__);
+						taskConnectPool.m_bStatus = true;
+						sprintf(m_httpReq,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n",httpDianxinGet.c_str(),std::string("111.235.158.136:8080").c_str());
+						taskConnectPool.socket->TcpSetKeepAliveOn();
+						if(taskConnectPool.socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
+						{
+							memset(remoteBuffer,0,_8KBLEN);
+							taskConnectPool.socket->TcpRead(remoteBuffer,_8KBLEN);
+							strReceiveBuffer = std::string(remoteBuffer);
+							printf("Line:%d,strReceiveBuffer=%s\n",__LINE__,strReceiveBuffer.c_str());
+
+						}
+						taskConnectPool.socket->TcpGetScoketOpt();
+						m_vevtorConnectPool.push_back(taskConnectPool);
+						totalConnectPool++;
+					}
+					else
+					{	
+						taskConnectPool.socket->TcpClose();
+					}
+					
+					
+				}		
+				InitConnectPool = 1;
+			}
+			pthread_mutex_unlock(&connectPoolMutex);
+#endif
+
+		//printf("Line:%d,totalConnectPool=%d\n",__LINE__,totalConnectPool);
 		while(times--)
 		{
+			#ifndef __CONECT_POOL__
+			pthread_mutex_lock (&connectPoolMutex);
+
+			std::vector<TASKCONNECT_S>::iterator itr;
+			for(itr = m_vevtorConnectPool.begin();itr!=m_vevtorConnectPool.end();itr++)
+			{
+				if( itr->m_bStatus	==	true )
+				{	
+					itr->m_bStatus = false;
+					printf("Line:%d,check tcp .....%d\n",__LINE__,itr->socket->TcpGetSocket());
+					itr->m_bStatus	=	false;
+					sprintf(m_httpReq,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n",httpDianxinGet.c_str(),std::string("111.235.158.136:8080").c_str());
+					taskConnectPool.socket->TcpSetKeepAliveOn();
+					if(taskConnectPool.socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
+					{
+						memset(remoteBuffer,0,_8KBLEN);
+						taskConnectPool.socket->TcpRead(remoteBuffer,_8KBLEN);
+						strReceiveBuffer = std::string(remoteBuffer);
+						printf("Line:%d,strReceiveBuffer=%s\n",__LINE__,strReceiveBuffer.c_str());
+					
+					}
+					
+				}
+				itr->m_bStatus	=	true;
+			}
+
+			pthread_mutex_unlock(&connectPoolMutex);
+			
+			#endif
+
 				temp_mapUserInfo.clear();
 				if(m_stMysqlServerInfo->GetMysqlInitState())
 				{

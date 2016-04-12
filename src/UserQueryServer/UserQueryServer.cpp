@@ -12,6 +12,7 @@ CUserQueryServer::CUserQueryServer(const IPPORT_S& stServer, const u_int uiWorkT
 {
 	// TODO Auto-generated constructor stub
 	m_pclSock = new CTcpSocket(stServer.m_uiPort, stServer.m_pchIp);
+	printf("Lind:%d,init CUserQueryServer.....\n",__LINE__);
 	if(!m_pclSock) {
 		throw std::runtime_error("new socket error.");
 	}

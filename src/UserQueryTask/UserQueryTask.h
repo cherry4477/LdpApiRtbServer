@@ -68,4 +68,10 @@ typedef struct {
 	CMutexLock m_clLock;
 }TASKQUE_S;
 
+typedef struct {
+	CTcpSocket *socket;
+	bool m_bStatus;
+}TASKCONNECT_S;
+
+
 #endif /* __USERQUERYTASK__ */

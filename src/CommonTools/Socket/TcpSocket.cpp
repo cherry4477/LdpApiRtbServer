@@ -22,7 +22,7 @@ CTcpSocket::CTcpSocket(const int iSockfd, const u_int uiTimeout) : m_iSockfd(iSo
 }
 
 /*
- * 鏋勯��
+ * 构造
  */
 CTcpSocket::CTcpSocket(const in_port_t in_portPort, const std::string& strIp, const u_int uiTimeout)
  : m_in_portPort(in_portPort), m_strIp(strIp), m_uiTimeout(uiTimeout)
@@ -36,7 +36,7 @@ CTcpSocket::CTcpSocket(const in_port_t in_portPort, const std::string& strIp, co
 }
 
 /*
- * 鏋愭瀯
+ * 析构
  */
 CTcpSocket::~CTcpSocket() throw()
 {
@@ -52,23 +52,23 @@ CTcpSocket::~CTcpSocket() throw()
 }
 
 /*
- * 鑾峰彇socket ip
- * 杩斿洖鍊硷細鐐规牸寮廼p 閿欒绌�
+ * 获取socket ip
+ * 返回值：点格式ip 错误空
  */
 std::string CTcpSocket::TcpGetSip()
 {
 	std::string strIp;
 	u_int uiSinSize = sizeof(struct sockaddr_in);
 	struct sockaddr_in stSockaddr;
-	if (m_iSockfd > 0 && getpeername(m_iSockfd, (struct sockaddr *)&stSockaddr, &uiSinSize) == 0) {//鑾峰彇socket 鍙傛暟缁撴瀯
+	if (m_iSockfd > 0 && getpeername(m_iSockfd, (struct sockaddr *)&stSockaddr, &uiSinSize) == 0) {//获取socket 参数结构
 		strIp = inet_ntoa(stSockaddr.sin_addr);
 	}
 	return strIp;
 }
 
 /*
- * 鑾峰彇socket鎻忚堪绗�
- * 杩斿洖鍊硷細socket 鎻忚堪绗�
+ * 获取socket描述符
+ * 返回值：socket 描述符
  */
 int CTcpSocket::TcpGetSockfd()
 {
@@ -87,8 +87,8 @@ bool CTcpSocket::TcpGetConnectStatus()
 }
 
 /*
- *鑾峰彇鏁村瀷ip
- *杩斿洖鍊硷細鏁村瀷ip  閿欒0
+ *获取整型ip
+ *返回值：整型ip  错误0
  */
 in_addr_t CTcpSocket::TcpGetIntIp()
 {
@@ -118,7 +118,7 @@ std::string CTcpSocket::TcpGetServerIp()
 
 /*
  * get socket port
- * Return-Value锛歴uccess local Sequence port else return 0
+ * Return-Value：success local Sequence port else return 0
  */
 in_port_t CTcpSocket::TcpGetPort()
 {
@@ -132,18 +132,46 @@ in_port_t CTcpSocket::TcpGetPort()
 }
 
 
+bool CTcpSocket::TcpGetScoketOpt()
+{	bool so_keep_alive;	
+	int bool_len =sizeof(so_keep_alive);	
+	if (-1 == getsockopt(m_iSockfd, SOL_SOCKET,SO_KEEPALIVE,(char*)&so_keep_alive,(socklen_t*)&bool_len)) 
+	{		fprintf(stderr, "%s\n", strerror(errno));		
+		return false;	
+
+	}	
+	printf("Line:%d,so_keep_alive=%d\n",__LINE__,so_keep_alive);	
+return true;
+
+}
+
+bool CTcpSocket::TcpSetKeepAliveOn()
+{	int iKeepAlive = 1;	
+	int nRet;
+
+	 nRet = ::setsockopt(m_iSockfd, SOL_SOCKET, SO_KEEPALIVE, (void*)&iKeepAlive, sizeof(iKeepAlive));	
+
+	if (nRet == -1)	
+	{		
+		return false;	
+	}	
+
+	return true;
+}
+
+
 /*
- * socket 缁戝畾ip 绔彛
- * 鍙傛暟锛�
- * port: 杩炴帴绔彛
- * ip:缁戝畾ip  榛樿涓虹┖
- * 杩斿洖鍊硷細鎴愬姛true  澶辫触false
+ * socket 绑定ip 端口
+ * 参数：
+ * port: 连接端口
+ * ip:绑定ip  默认为空
+ * 返回值：成功true  失败false
  */
 bool CTcpSocket::TcpBind(const in_port_t in_portPort, const std::string& strIp)
 {
 	std::string strTmpIp;
 	in_port_t in_portTmpPort = 0;
-	if (strIp.empty()) {//鏈嶅姟鍣╥p涓虹┖
+	if (strIp.empty()) {//服务器ip为空
 		strTmpIp = m_strIp;
 	} else {
 		strTmpIp = strIp;
@@ -156,22 +184,22 @@ bool CTcpSocket::TcpBind(const in_port_t in_portPort, const std::string& strIp)
 	struct sockaddr_in stServerAddr;
 	stServerAddr.sin_family = AF_INET;
 	stServerAddr.sin_port = htons(in_portTmpPort);
-	if (strTmpIp.empty()) {//ip涓虹┖
-		stServerAddr.sin_addr.s_addr = INADDR_ANY;//浠绘剰鍦板潃鐩戝惉
-	} else {//ip闈炵┖
-		inet_aton(strTmpIp.c_str(),&stServerAddr.sin_addr);//鎸囧畾ip娈电洃鍚�
+	if (strTmpIp.empty()) {//ip为空
+		stServerAddr.sin_addr.s_addr = INADDR_ANY;//任意地址监听
+	} else {//ip非空
+		inet_aton(strTmpIp.c_str(),&stServerAddr.sin_addr);//指定ip段监听
 	}
-	if (::bind(m_iSockfd,(struct sockaddr *)&stServerAddr,sizeof(struct sockaddr)) == -1) {//缁戝畾澶辫触
+	if (::bind(m_iSockfd,(struct sockaddr *)&stServerAddr,sizeof(struct sockaddr)) == -1) {//绑定失败
 		return false;
 	}
 	return true;
 }
 
 /*
- * socket 鐩戝惉
- * 鍙傛暟锛�
- * reqNum: 鐩戝惉闃熷垪鏈�澶ч暱搴︼紝 榛樿鐢辩郴缁熸帶鍒�
- * 杩斿洖鍊�:鎴愬姛true 澶辫触false
+ * socket 监听
+ * 参数：
+ * reqNum: 监听队列最大长度， 默认由系统控制
+ * 返回值:成功true 失败false
  */
 bool CTcpSocket::TcpListen(const int iReqNum)
 {
@@ -182,28 +210,28 @@ bool CTcpSocket::TcpListen(const int iReqNum)
 }
 
 /*
- * server 鎺ユ敹client 杩炴帴
- * 鍙傛暟锛�
- * 杩斿洖鍊硷細鎴愬姛锛氬鎴风socket 鎸囬拡, 澶辫触锛氱┖
+ * server 接收client 连接
+ * 参数：
+ * 返回值：成功：客户端socket 指针, 失败：空
  */
 CTcpSocket* CTcpSocket::TcpAccept()
 {
-	if (m_iSockfd < 0) {//鎻忚堪绗﹂敊璇�
+	if (m_iSockfd < 0) {//描述符错误
 		return false;
 	}
 	struct sockaddr_in stClientAddr;
 	u_int uiSinSize = sizeof(struct sockaddr_in);
 	int iclientfd = -1;
-	if((iclientfd = ::accept(m_iSockfd, (struct sockaddr *)&stClientAddr, &uiSinSize)) < 0) {//accept澶辫触
+	if((iclientfd = ::accept(m_iSockfd, (struct sockaddr *)&stClientAddr, &uiSinSize)) < 0) {//accept失败
 		return false;
 	}
 	return new CTcpSocket(iclientfd, m_uiTimeout); 
 }
 
 /*
- * 甯︽湁瓒呮椂鐨勭洃鍚�
- * 鍙傛暟锛歱socket 淇濆瓨瀹㈡埛绔殑socket瀵硅薄鎸囬拡
- * 杩斿洖鍊硷細锛�1 鍑洪敊  0 瓒呮椂  1鎴愬姛
+ * 带有超时的监听
+ * 参数：psocket 保存客户端的socket对象指针
+ * 返回值：－1 出错  0 超时  1成功
  */
 int CTcpSocket::TcpTimeoutAccept(CTcpSocket*& pEmSocket)
 {
@@ -218,10 +246,10 @@ int CTcpSocket::TcpTimeoutAccept(CTcpSocket*& pEmSocket)
 	while(true) {
 		switch(select(m_iSockfd + 1, &fdReadfds, 0, NULL, &stTimeval))
 		{
-		case -1://select鍑洪敊
+		case -1://select出错
 			return -1;
 			break;
-		case 0://鐩戝惉瓒呮椂
+		case 0://监听超时
 			return 0;
 			break;
 		default:
@@ -230,7 +258,7 @@ int CTcpSocket::TcpTimeoutAccept(CTcpSocket*& pEmSocket)
 				if ((iClientfd = ::accept(m_iSockfd, (struct sockaddr *) &stClientAddr, &uiSinSize)) == -1) {
 					return -1;
 				}
-				pEmSocket = new CTcpSocket(iClientfd, m_uiTimeout);//鍒涘缓瀹㈡埛绔璞�
+				pEmSocket = new CTcpSocket(iClientfd, m_uiTimeout);//创建客户端对象
 				return 1;
 			}
 			//LOG(ERROR, "which readfd is reading?!");
@@ -242,14 +270,14 @@ int CTcpSocket::TcpTimeoutAccept(CTcpSocket*& pEmSocket)
 }
 
 /*
- * socket杩炴帴鏈嶅姟鍣�
- * 鍙傛暟锛� 绔彛  ip
- * 杩斿洖鍊硷細-1 鍑洪敊  -2 瓒呮椂  -3 server鏈紑 0 鎴愬姛
+ * socket连接服务器
+ * 参数： 端口  ip
+ * 返回值：-1 出错  -2 超时  -3 server未开 0 成功
  */
 int CTcpSocket::TcpConnect(const in_port_t in_portPort, const std::string& strIp)
 {
  
-	if(m_iSockfd == -1) {//鎻忚堪绗﹂敊璇�
+	if(m_iSockfd == -1) {//描述符错误
 		return -1;
 	}
 	struct sockaddr_in stAddress;
@@ -279,21 +307,21 @@ int CTcpSocket::TcpConnect(const in_port_t in_portPort, const std::string& strIp
 }
 
 /*
- * 閲嶈繛socket
- * 鍙傛暟锛�
- * sockfd : 閲嶈繛鍙ユ焺
- * ip:server銆�ip
+ * 重连socket
+ * 参数：
+ * sockfd : 重连句柄
+ * ip:server　ip
  * port: server Port
- * 杩斿洖鍊硷細鎴愬姛true 澶辫触false
+ * 返回值：成功true 失败false
  */
 int CTcpSocket::TcpReconnect()
 {
 	if(m_bConnect) {
-		::close(m_iSockfd);//鍏虫帀鍘熸湁鐨勮繛鎺�
+		::close(m_iSockfd);//关掉原有的连接
 		m_iSockfd = -1;
 		m_bConnect = false;
 		m_iSockfd = socket(AF_INET,SOCK_STREAM,0);
-		if(m_iSockfd < 0) {//鍒涘缓socket澶辫触
+		if(m_iSockfd < 0) {//创建socket失败
 			return -1;
 		}
 	}
@@ -301,41 +329,42 @@ int CTcpSocket::TcpReconnect()
 }
 
 /*
- * socket璇诲彇鏁版嵁
- * 鍙傛暟锛�
- * recvBuf:淇濆瓨璇诲彇鏁版嵁buf
- * recvLen:璇诲彇闀垮害
- * 杩斿洖鍊硷細鎴愬姛杩斿洖璇诲彇鍒扮殑闀垮害   澶辫触杩斿洖-1  瓒呮椂锛�2 璇诲彇瀵硅薄涓嶅瓨鍦� 0
+ * socket读取数据
+ * 参数：
+ * recvBuf:保存读取数据buf
+ * recvLen:读取长度
+ * 返回值：成功返回读取到的长度   失败返回-1  超时－2 读取对象不存在 0
  */
 
 int CTcpSocket::TcpRead(void *const pvRecvBuf, size_t sizeRecvLen)
 {
-	if(pvRecvBuf == NULL || sizeRecvLen <= 0 || m_iSockfd == -1) {//鍙傛暟鏈夎
+	if(pvRecvBuf == NULL || sizeRecvLen <= 0 || m_iSockfd == -1) {//参数有误
 		return -1;
 	}
 	struct timeval stTimeout;
-	stTimeout.tv_sec =2;// m_uiTimeout;
+	stTimeout.tv_sec =1;// m_uiTimeout;
 	stTimeout.tv_usec = m_uiTimeout;
 	//int sock_buf_size=9012;
 
-if(::setsockopt(m_iSockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&stTimeout, sizeof(stTimeout)) == -1) {//璁剧疆璇诲彇瓒呮椂 澶辫触
+if(::setsockopt(m_iSockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&stTimeout, sizeof(stTimeout)) == -1) {//设置读取超时 失败
 		return -1;
 	}
-
-	//if(::setsockopt(m_iSockfd, SOL_SOCKET,SO_RCVBUF,(char*)&sock_buf_size, sizeof(sock_buf_size)) == -1) {//璁剧疆璇诲彇瓒呮椂 澶辫触
-	//	return -1;
-	//}
+	/*
+	if(::setsockopt(m_iSockfd, SOL_SOCKET,SO_RCVBUF,(char*)&sock_buf_size, sizeof(sock_buf_size)) == -1) {//设置读取超时 失败
+		return -1;
+	}
+	*/
 	int res = ::recv(m_iSockfd, pvRecvBuf, sizeRecvLen, 0);
 	switch(res)
 	{
 	case -1:
-		if(errno == EAGAIN) {//瓒呮椂
+		if(errno == EAGAIN) {//超时
 			errno = 0;
 			return -2;
-		}//else鍑洪敊
+		}//else出错
 		return -1;
 		break;
-	case 0://socket 璇诲彇瀵硅薄涓嶅瓨鍦�
+	case 0://socket 读取对象不存在
 		return 0;
 		break;
 	default:
@@ -347,11 +376,11 @@ if(::setsockopt(m_iSockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&stTimeout, sizeof(s
 }
 
 /*
- * socket璇诲彇鏁版嵁
- * 鍙傛暟锛�
- * recvBuf:淇濆瓨璇诲彇鏁版嵁buf
- * recvLen:璇诲彇闀垮害
- * 杩斿洖鍊硷細鎴愬姛杩斿洖鎺ユ敹闀垮害   澶辫触杩斿洖-1  瓒呮椂锛�2 璇诲彇瀵硅薄涓嶅瓨鍦� 0
+ * socket读取数据
+ * 参数：
+ * recvBuf:保存读取数据buf
+ * recvLen:读取长度
+ * 返回值：成功返回接收长度   失败返回-1  超时－2 读取对象不存在 0
  */
 int CTcpSocket::TcpReadAll(void *const pvRecvBuf, size_t sizeRecvLen)
 {
@@ -361,9 +390,9 @@ int CTcpSocket::TcpReadAll(void *const pvRecvBuf, size_t sizeRecvLen)
 	int ilen = 0;
 	int ilength = 0;
 	while((ilength = TcpRead(((char *)pvRecvBuf + ilen), sizeRecvLen - ilen)) > 0)
-	{//璇诲彇鎵�鏈夌殑socket 鏁版嵁
-		ilen += ilength;//宸茶鍙栫殑闀垮害
-		if((u_int)ilen >= sizeRecvLen) {//璇诲彇recvLen瀹屾瘯
+	{//读取所有的socket 数据
+		ilen += ilength;//已读取的长度
+		if((u_int)ilen >= sizeRecvLen) {//读取recvLen完毕
 			break;
 		}
 	}
@@ -376,10 +405,10 @@ int CTcpSocket::TcpReadAll(void *const pvRecvBuf, size_t sizeRecvLen)
 
 bool CTcpSocket::TcpWrite(const void *pvSendBuf,size_t sizeSendLen)
 {
-	if(!pvSendBuf || sizeSendLen <= 0) {//鍙傛暟鏈夎
+	if(!pvSendBuf || sizeSendLen <= 0) {//参数有误
 		return false;
 	}
-	if(::send(m_iSockfd, pvSendBuf, sizeSendLen,0) != (int)sizeSendLen) {//鍙戦�佸け璐�
+	if(::send(m_iSockfd, pvSendBuf, sizeSendLen,0) != (int)sizeSendLen) {//发送失败
 		return false;
 	}
 	return true;
@@ -388,11 +417,12 @@ bool CTcpSocket::TcpWrite(const void *pvSendBuf,size_t sizeSendLen)
 
 bool CTcpSocket:: TcpClose()
 {
+	
 	struct linger so_linger;
 	so_linger.l_onoff = true;
 	so_linger.l_linger = 0;
+	printf("m_iSockfd=%d is closing....\n",m_iSockfd);
 	setsockopt(m_iSockfd,SOL_SOCKET,SO_LINGER,&so_linger,sizeof(so_linger));
-	printf("m_iSockfd=%d is closing \n",m_iSockfd);
 	if(m_bConnect) {
 		if(m_iSockfd != -1)
 		{
@@ -489,7 +519,7 @@ int CTcpSocket::TcpSendEmail(char * smtpServer,int port,char* username,char * pa
  memset(buffer,0,sizeof(buffer));
  memset(recvBuff,0,sizeof(recvBuff));
  printf("from=%s,len %d\n",from,strlen(from));
- sprintf(buffer,"EHLO %s\n",from);//from为char数据。存储发送地址
+ sprintf(buffer,"EHLO %s\n",from);//fromΪchar���ݡ��洢���͵�ַ
  printf("buffer=%s,len=%d\n",buffer,strlen(buffer));
  if(!TcpWrite(buffer,strlen(buffer)))
  {
@@ -509,7 +539,7 @@ int CTcpSocket::TcpSendEmail(char * smtpServer,int port,char* username,char * pa
 
  //USER NAME
  //User name is coded by base64.
- //base64_encode_2(username,buffer);//先将用户帐号经过base64编码
+ //base64_encode_2(username,buffer);//�Ƚ��û��ʺž���base64����
  EncodingBase64(username,buffer);
  printf("username buffer=%s\n",buffer);
  strcat(buffer,"\r\n");
@@ -749,17 +779,17 @@ int CTcpSocket::TcpSslInitEnv()
 						/* certificate.                             */
 						SSL_CTX_load_verify_locations(ssl_ctx, strSslKeyPath.c_str(), NULL); 
 						/* Set flag in context to require peer (server) certificate verification */
-						SSL_CTX_set_verify(ssl_ctx,SSL_VERIFY_NONE,NULL); //鏄惁瑕佹眰瀵圭楠岃瘉 榛樿 SSL_VERIFY_NONE  ;SSL_VERIFY_PEER
+						SSL_CTX_set_verify(ssl_ctx,SSL_VERIFY_NONE,NULL); //是否要求对端验证 默认 SSL_VERIFY_NONE  ;SSL_VERIFY_PEER
 						
 						SSL_CTX_set_verify_depth(ssl_ctx,1);
 						SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, (void*)strSslKeyPassWord.c_str());
 						//SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, (void*)"dataMining");
-						//璇诲彇璇佷功鏂囦欢
+						//读取证书文件
 						SSL_CTX_use_certificate_file(ssl_ctx,strSslKeyPath.c_str(),SSL_FILETYPE_PEM);
-						//璇诲彇瀵嗛挜鏂囦欢
+						//读取密钥文件
 						SSL_CTX_use_PrivateKey_file(ssl_ctx,strSslKeyPath.c_str(),SSL_FILETYPE_PEM);
 						
-						//楠岃瘉瀵嗛挜鏄惁涓庤瘉涔︿竴鑷�
+						//验证密钥是否与证书一致
 						if(!SSL_CTX_check_private_key(ssl_ctx))
 						{
 								ERR_print_errors_fp(stderr);	
@@ -767,7 +797,7 @@ int CTcpSocket::TcpSslInitEnv()
 								 
 						#endif
 		ssl = SSL_new(ssl_ctx);
-	//openssl鐨勬枃妗ｄ笂涔熸槑鏂囪瀹氫笉鑳藉皢涓�涓猄SL鎸囬拡鐢ㄤ簬澶氫釜绾跨▼锛屾墍鏈夎皟鐢–reateThread鍑芥暟鍒涘缓绾跨▼锛屽弬鏁拌缃负SSL鎸囬拡蹇呯劧鍦ㄧ嚎绋嬩腑鏄簰鏂ョ殑锛岃�冭檻杩愮敤windows寮�婧愬簱pthread鏀归�犲绾跨▼
+	//openssl的文档上也明文规定不能将一个SSL指针用于多个线程，所有调用CreateThread函数创建线程，参数设置为SSL指针必然在线程中是互斥的，考虑运用windows开源库pthread改造多线程
 		return 0;
 }
 

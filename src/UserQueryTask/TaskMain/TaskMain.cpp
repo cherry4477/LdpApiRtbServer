@@ -29,12 +29,20 @@ extern std::map<std::string,QUERYAPIINFO_S> g_vecUrlAPIS;
 extern pthread_rwlock_t p_rwlock;
 extern pthread_rwlockattr_t p_rwlock_attr;
 extern pthread_mutex_t mutex;
+extern pthread_mutex_t connectPoolMutex;
+
 extern std::string g_strTokenString ;
 extern std::string ssToken;
 extern u_int  g_iNeedUpdateToken ;
 extern int iAPIQpsLimit;
 
 int InitSSLFlag = 0;
+
+int InitConnectPool = 0;
+int totalConnectPool=0;
+std::vector<TASKCONNECT_S> m_vevtorConnectPool;
+TASKCONNECT_S taskConnectPool;
+
 
 static const string http=" HTTP/1.1";
 
@@ -43,7 +51,7 @@ static const char http200ok[] = "HTTP/1.1 200 OK\r\nServer: Bdx DMP/0.1.0\r\nCac
 static const char httpReq[]="GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n";
 
 #define __EXPIRE__
-
+#define __CONECT_POOL__
 
 CTaskMain::CTaskMain(CTcpSocket* pclSock):CUserQueryTask(pclSock)
 {
@@ -1494,11 +1502,11 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									}
 										break;
 								case 4:		
-	long int st1,st2,st3,st4;
-long int ut1,ut2,ut3,ut4;		
+									long int st1,st2,st3,st4;
+									long int ut1,ut2,ut3,ut4;
 									m_clEmTime.TimeOff();
-                                                                                 st1=m_clEmTime.TimeGetSeconds();
-                                                                                 ut1=m_clEmTime.TimeGetMicSeconds();
+                                    st1=m_clEmTime.TimeGetSeconds();
+                                    ut1=m_clEmTime.TimeGetMicSeconds();
 
 									//printf("Line:%d,%ld,before link dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 									LOG(ERROR,"before link dianxin [thread: %d],[second: %d, Microsecond: %d]",m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
@@ -1614,120 +1622,202 @@ long int ut1,ut2,ut3,ut4;
 										LOG(DEBUG,"m_httpReq=%s",m_httpReq);
 										remoteIp.assign(it->first,0,it->first.find(":",0));
 										remotePort = atoi(it->first.substr(it->first.find(":",0)+1).c_str());
-										remoteSocket=new CTcpSocket(remotePort,remoteIp);
-										if(remoteSocket->TcpConnect()!=0)
-										{						
-											errorMsg = "EE0009"; 
-											printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
-											stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
-											m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
-											CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
 
-											stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
-											m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
-											
-											errorMsg = "E0007";
-											LOG(ERROR,"connect remote api error ,[thread: %d],errorCode %s ",m_uiThreadId,errorMsg.c_str());
-											printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
-											stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
-											m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
-											m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyEmptyRes);
-											//pthread_rwlock_unlock(&p_rwlock);
-											remoteSocket->TcpClose();
-											delete remoteSocket;
-											delete jReader;
-											return ERRORNODATA;
-										}
-										m_clEmTime.TimeOff();
-										st2=m_clEmTime.TimeGetSeconds();
-										ut2=m_clEmTime.TimeGetMicSeconds();
-					//printf("Line:%d,current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st2-st1,ut2-ut1);	
-										//printf("Line:%d,%ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-										LOG(ERROR,"current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st2-st1,ut2-ut1);
-										//LOG(ERROR,"connect dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-										if(remoteSocket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
+										#ifdef __CONECT_POOL__
+											pthread_mutex_lock (&connectPoolMutex);
+										    
+											std::vector<TASKCONNECT_S>::iterator itr;
+											for(itr = m_vevtorConnectPool.begin();itr!=m_vevtorConnectPool.end();itr++)
+											{
+												if(	itr->m_bStatus	==	true )
+												{	
+													printf("Line:%d,Thread:%d,find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													itr->m_bStatus	=	false;
+													//totalConnectPool--;
+													break;
+												}
+											}
+											pthread_mutex_unlock(&connectPoolMutex);
+										#endif
+										if(	itr!=m_vevtorConnectPool.end())
 										{
-											m_clEmTime.TimeOff();
-                                                                                st3=m_clEmTime.TimeGetSeconds();
-                                                                                ut3=m_clEmTime.TimeGetMicSeconds();
-											//printf("Line:%d,current time : %ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st3-st2,ut3-ut2);
-											//printf("Line:%d,%ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-											LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st3-st2,ut3-ut2);
-											//LOG(ERROR,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-											memset(remoteBuffer,0,_8KBLEN);
-											//remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
-											remoteSocket->TcpRead(remoteBuffer,_8KBLEN);	
-											m_clEmTime.TimeOff();
-                                                                                st4=m_clEmTime.TimeGetSeconds();
-                                                                                ut4=m_clEmTime.TimeGetMicSeconds();
-	//printf("Line:%d,current time : %ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st4-st3,ut4-ut3);
-											//printf("Line:%d,%ld,read   from dianxin [thread: %d],[second: %d, Microsecond: %d]\n\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-											LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
-											//LOG(ERROR,"read from  dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-											if( strlen(remoteBuffer) > 0 )
-											{					
+											if(itr->socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
+											{		
+													//printf("Line:%d,Thread:%d,m_vevtorConnectPool...socket [%d]....write\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													m_clEmTime.TimeOff();
+													ut3=m_clEmTime.TimeGetMicSeconds();
+													//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st3-st2,ut3-ut2);
+													//printf("Line:%d,%ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+													LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st3-st2,ut3-ut2);
+													//LOG(ERROR,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+													memset(remoteBuffer,0,_8KBLEN);
+													//remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
+													itr->socket->TcpRead(remoteBuffer,_8KBLEN);	
+													//printf("Line:%d,Thread:%d,m_vevtorConnectPool...socket [%d]....read\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													m_clEmTime.TimeOff();
+													st4=m_clEmTime.TimeGetSeconds();
+													ut4=m_clEmTime.TimeGetMicSeconds();
+													//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st4-st3,ut4-ut3);
+													//printf("Line:%d,%ld,read	 from dianxin [thread: %d],[second: %d, Microsecond: %d]\n\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+													LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
+													//LOG(ERROR,"read from	dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+													if( strlen(remoteBuffer) > 0 )
+													{					
+														
+														mResValueRemote = std::string(remoteBuffer);	
+														//printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
+														LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
+														stResponseInfo.mResValue = std::string(remoteBuffer);
+														signError = "\"code\":500,\"status\":\"FAIL\",\"message\":\"SAuthRss : Sign is wrong";
+														//printf("queryTimes=%d\n",queryTimes);
+														if(queryTimes<=3&&stResponseInfo.mResValue.find(signError)!=std::string::npos)
+														{
+															itr->m_bStatus = true;
+															//totalConnectPool++;
+															goto Label;
+														}
+														else
+														{
+															itr->m_bStatus = true;
+															//totalConnectPool++;
+														}
+											
+														
+													 }
+													 else
+													 {
+														//iQueryCategory++;
+														errorMsg = "EE0009"; 
+														printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+														stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
+														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
+														CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
 												
-												mResValueRemote = std::string(remoteBuffer);	
-												//printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
-												LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
-												stResponseInfo.mResValue = std::string(remoteBuffer);
-												signError = "\"code\":500,\"status\":\"FAIL\",\"message\":\"SAuthRss : Sign is wrong";
-												//printf("queryTimes=%d\n",queryTimes);
-												if(queryTimes<=3&&stResponseInfo.mResValue.find(signError)!=std::string::npos)
-												{
-													
-													remoteSocket->TcpClose();
-													delete remoteSocket;
-													goto Label;
-												}
-												else
-												{
-													remoteSocket->TcpClose();
-													delete remoteSocket;
-												}
+														stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
+														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
+														
+														errorMsg = "E0007";
+														printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+														stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
+														m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
+														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyEmptyRes);
+														itr->m_bStatus = true;
+														delete jReader;
+														return ERRORNODATA;
+													 }		
+
+											}
+											else
+											{
+												itr->m_bStatus = true;	
+												//totalConnectPool++;
+												delete jReader;						
+												return ERRORNODATA;						
+											}	
 												
-												//lenStrTemp = stResponseInfo.mResValue.length();
-												//if( stResponseInfo.mResValue.find("\r\n\r\n")!=std::string::npos )
-												//{
-												//	stResponseInfo.mResValue = stResponseInfo.mResValue.substr(mResValueRemote.find("\r\n\r\n")+4,lenStrTemp -(stResponseInfo.mResValue.find("\r\n\r\n")+4));
-												//}
-												
-												
-												//return SUCCESS;
-												
-											 }
-											 else
-											 {
-												//iQueryCategory++;
+										}
+										else
+										{							
+											printf("Line:%d,connect pool is not enough....\n",__LINE__);
+											remoteSocket=new CTcpSocket(remotePort,remoteIp);
+											if(remoteSocket->TcpConnect()!=0)
+											{						
 												errorMsg = "EE0009"; 
 												printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 												stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
 												m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 												CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
-
+											
 												stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
 												m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 												
 												errorMsg = "E0007";
+												LOG(ERROR,"connect remote api error ,[thread: %d],errorCode %s ",m_uiThreadId,errorMsg.c_str());
 												printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 												stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
 												m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
 												m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyEmptyRes);
+												//pthread_rwlock_unlock(&p_rwlock);
 												remoteSocket->TcpClose();
 												delete remoteSocket;
 												delete jReader;
 												return ERRORNODATA;
-											 }		
-										 }
-										 else
-										{
-												//iQueryCategory++;
-												//errorMsg = "E0001";  //  internal connection socket error
-												remoteSocket->TcpClose();
-												delete remoteSocket;
-												delete jReader;
-												return ERRORNODATA;
-										}		
+											}
+											m_clEmTime.TimeOff();
+											st2=m_clEmTime.TimeGetSeconds();
+											ut2=m_clEmTime.TimeGetMicSeconds();
+											//printf("Line:%d,current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st2-st1,ut2-ut1);	
+											//printf("Line:%d,%ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+											LOG(ERROR,"current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st2-st1,ut2-ut1);
+											//LOG(ERROR,"connect dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+											if(remoteSocket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
+											{
+												m_clEmTime.TimeOff();
+																					st3=m_clEmTime.TimeGetSeconds();
+																					ut3=m_clEmTime.TimeGetMicSeconds();
+												//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st3-st2,ut3-ut2);
+												//printf("Line:%d,%ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+												LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st3-st2,ut3-ut2);
+												//LOG(ERROR,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+												memset(remoteBuffer,0,_8KBLEN);
+												//remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
+												remoteSocket->TcpRead(remoteBuffer,_8KBLEN);	
+												m_clEmTime.TimeOff();
+												st4=m_clEmTime.TimeGetSeconds();
+												ut4=m_clEmTime.TimeGetMicSeconds();
+												//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st4-st3,ut4-ut3);
+												//printf("Line:%d,%ld,read	 from dianxin [thread: %d],[second: %d, Microsecond: %d]\n\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+												LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
+												//LOG(ERROR,"read from	dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
+												if( strlen(remoteBuffer) > 0 )
+												{					
+													
+													mResValueRemote = std::string(remoteBuffer);	
+													//printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
+													LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
+													stResponseInfo.mResValue = std::string(remoteBuffer);
+													signError = "\"code\":500,\"status\":\"FAIL\",\"message\":\"SAuthRss : Sign is wrong";
+													//printf("queryTimes=%d\n",queryTimes);
+													if(queryTimes<=3&&stResponseInfo.mResValue.find(signError)!=std::string::npos)
+													{
+														
+														remoteSocket->TcpClose();
+														delete remoteSocket;
+														goto Label;
+													}
+													else
+													{
+														remoteSocket->TcpClose();
+														//delete remoteSocket;
+													}
+													
+												 }
+												 else
+												 {
+													//iQueryCategory++;
+													errorMsg = "EE0009"; 
+													printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+													stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
+													m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
+													CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
+											
+													stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
+													m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
+													
+													errorMsg = "E0007";
+													printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+													stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
+													m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
+													m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyEmptyRes);
+													remoteSocket->TcpClose();
+													delete remoteSocket;
+													delete jReader;
+													return ERRORNODATA;
+												 }		
+
+												}
+										}
+
 											  			
 									}
 										break;

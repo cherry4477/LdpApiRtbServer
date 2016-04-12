@@ -14,7 +14,7 @@ extern std::string strServerName;
 extern std::string strConfigFileName;
 extern pthread_rwlock_t p_rwlock;
 extern  pthread_rwlockattr_t p_rwlock_attr;
-extern pthread_mutex_t mutex;
+extern pthread_mutex_t mutex,connectPoolMutex;
 std::string strSslKeyPath;
 std::string strSslKeyPassWord;
 int iAPIQpsLimit;
@@ -27,6 +27,7 @@ string m_strMailFrom;
 string m_strRcptTo;
 string m_strSubject;
 string m_strErrorMsg;
+u_int m_uiTotalThreadsNum;
 
 
 
@@ -62,6 +63,7 @@ void CUserQueryMain::UserQueryMainCore()
 	}  
 
 	pthread_mutex_init (&mutex,NULL);
+	pthread_mutex_init (&connectPoolMutex,NULL);
 
 
 	for(u_int i = 0; i < m_uiThreadsNum; ++i) {
@@ -522,6 +524,7 @@ bool CUserQueryMain::BdxGetThreadsPrm(CConf *pCConf, char *pszSection)
 			if (SUCCESS == pCConf->ConfKeyValue(szLine, &pszKey, &pszVal)) {
 				if (strcmp(pszKey, "NUM") == 0) {
 					m_uiThreadsNum = atoi(pszVal);
+					m_uiTotalThreadsNum = m_uiThreadsNum;
 				}
 			}
 		}

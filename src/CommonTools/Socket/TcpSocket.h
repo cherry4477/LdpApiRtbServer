@@ -48,6 +48,8 @@ public:
 	int  TcpSendEmail(char * smtpServer,int port,char* username,char * password,char* from,char * to,char * subject,char * body);
 	bool TcpCloseFinal();
 	bool TcpNewSocket();
+	bool TcpGetScoketOpt();
+	bool TcpSetKeepAliveOn();
 	void TcpSetIp(const std::string& strIp);
 	void TcpSetPort(const in_port_t in_portPort);
 	void TcpSetTimeout(const u_int uiTimeout);
