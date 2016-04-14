@@ -52,6 +52,7 @@ static const char httpReq[]="GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: ide
 
 #define __EXPIRE__
 #define __CONECT_POOL__
+#define __LOCAL__
 
 CTaskMain::CTaskMain(CTcpSocket* pclSock):CUserQueryTask(pclSock)
 {
@@ -619,6 +620,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 					stResponseInfo.ssOperatorNameKeyLimit ="Limit_"+BdxTaskMainGetDate()+"_"+strProvince+"_"+strOperator;
 
 					stResponseInfo.queryType=1;
+					#ifdef __LOCAL__
 				    if(m_pDataRedis->UserGet(stResponseInfo.ssUserCountKeyUserLimitReq,ssmoidValue)&&(g_mapUserInfo.find(map_UserValueKey.find(KEY_USER)->second)->second.mIntQueryTimes>0))
 				    {	
 						if(atoi(ssmoidValue.c_str())> g_mapUserInfo.find(strUser)->second.mIntQueryTimes)
@@ -631,6 +633,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 							return EXCEEDLIMIT;
 						}
 					}
+					#endif
 					//m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyUserLimitReq);
 					//m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyUserLimitReq);
 					//m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReq); ////req++	
@@ -696,7 +699,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 						{	
 							ssContent=ssContent+"_"+filterDate;
 						}
-							
+
 						if(m_pDataRedis->UserGet(ssContent,ssmoidValue)&&(strKeyType!="M"&&strOperator!="ctc"))
 						{	
 							LOG(DEBUG,"ssmoidValue=%s",ssmoidValue.c_str());
@@ -783,6 +786,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 							}
 							
 						}
+						#ifdef  __LOCAL__
 						else if ( (strKeyType!="M"&&strOperator=="ctc"))
 						{
 							if(!m_pDataRedis->UserGet(ssContent,ssmoidValue))
@@ -795,6 +799,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 							}
 
 						}
+						#endif
 						else
 						{
 							//when no data in local redis,then query remote api
@@ -1514,7 +1519,9 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									if((it->second.mProvince == strProvince)&&(it->second.mCarrierOperator ==strOperator))
 									{									
 									std::string strQpsLimit="dianxin_qps_limit_"+ BdxTaskMainGetMinute();
-									
+
+
+									#ifdef  __LOCAL__
 									if(m_pDataRedis->UserGet(stResponseInfo.ssOperatorNameKeyLimit,ssmoidValue))
 									{	
 										//运营商和省份都不为空的才限制;没有的时候只查本地,不做限制
@@ -1530,6 +1537,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 									}
 									
 									m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyLimit);
+									#endif
 									#if 0  //qps limit
 									if(m_pDataRedis->UserGet(strQpsLimit,ssmoidValue))
 									{	//qps limit
@@ -1705,6 +1713,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 														LOG(ERROR,"[thread: %d],read error",m_uiThreadId);
 														stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
 														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
+														 
 														CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
 												
 														stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;

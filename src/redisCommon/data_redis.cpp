@@ -64,12 +64,12 @@ bool CDataRedis::Init(const char *host, unsigned short port, uint16_t idx) {
 
 bool CDataRedis::KeepConnect(uint32_t timeout) {
 	if (context_!=NULL) return true;
-	struct timeval st_timeout = {0, 300000}; // 1.5 seconds
+	struct timeval st_timeout = {0, 30000}; // 1.5 seconds
 	if(timeout) st_timeout.tv_usec = timeout;
 	context_ = redisConnectWithTimeout(host_, port_, st_timeout);
 	if (context_ == NULL || context_->err) {
 		if (context_) {
-			printf("Connection[%s:%u] error: %s.\n",host_, port_,context_->errstr);
+			printf("%s,%d,Connection[%s:%u] error: %s.\n",__FILE__,__LINE__,host_, port_,context_->errstr);
 			redisFree(context_);
 			context_ = NULL;
 		} else {
@@ -186,7 +186,8 @@ bool CDataRedis::GetValue(const char *key, string &value) {
 			//printf("fail to get value, key: %s, error: %s.\n",key,reply->str);
 			freeReplyObject(reply);
 		}
-		DisConnect();//chenyg add 20150714
+		//printf("File:%s,Line:%d to get value, key: %s, error: %s.\n",__FILE__,__LINE__,key,reply->str);
+		//DisConnect();//chenyg add 20150714
 		return false;
 	}else {
 		//printf("reply->str=%s\n",reply->str);
@@ -295,7 +296,7 @@ bool CDataRedis::SetValue(const char* key, const char *value, int32_t expiration
 			printf("Fail to set value, key: %s, value: %s, error: %s.\n",key,value,reply->str);
 			freeReplyObject(reply);
 		}
-		DisConnect();
+		//DisConnect();//
 		return false;
 	}
 
@@ -525,7 +526,7 @@ bool CDataRedis::IncrValue(const char* key,int32_t expiration) {
 			//printf("Fail to incr value, key: %s, error: %s.\n",key,reply->str);
 			freeReplyObject(reply);
 		}
-		DisConnect(); //chenyg add 20150714
+		//DisConnect(); //chenyg add 20150714
 		return false;
 	}
 
@@ -550,7 +551,7 @@ bool CDataRedis::IncrByValue(const char* key,int32_t expiration) {
 			//printf("Fail to incr value, key: %s, error: %s.\n",key,reply->str);
 			freeReplyObject(reply);
 		}
-		DisConnect(); //chenyg add 20150714
+		//DisConnect(); //chenyg add 20150714
 		return false;
 	}
 
