@@ -1631,7 +1631,8 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											{
 												if(	itr->m_bStatus	==	true )
 												{	
-													printf("Line:%d,Thread:[ %5d ],find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													//printf("Line:%d,Thread:[ %5d ],find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													LOG(ERROR,"[thread: %d],find one connect....",m_uiThreadId);
 													itr->m_bStatus	=	false;
 													//totalConnectPool--;
 													break;
@@ -1643,13 +1644,16 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 										{
 											if(itr->socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
 											{		
-													printf("Line:%d,Thread:%d,m_vevtorConnectPool...socket [%d]....write\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
+													//printf("Line:%d,Thread:%d,m_vevtorConnectPool...socket [%d]....write\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
 													LOG(ERROR,"[thread: %d],write ok",m_uiThreadId);
 													m_clEmTime.TimeOff();
-													ut3=m_clEmTime.TimeGetMicSeconds();
+													
+													st2=m_clEmTime.TimeGetSeconds();
+													ut2=m_clEmTime.TimeGetMicSeconds();
+
 													//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st3-st2,ut3-ut2);
 													//printf("Line:%d,%ld,write   to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-													//LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st3-st2,ut3-ut2);
+													LOG(ERROR,"current time : %ld,write  to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st2-st1,ut2-ut1);
 													//LOG(ERROR,"write to dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 													memset(remoteBuffer,0,_8KBLEN);
 													//remoteSocket->TcpReadAll(remoteBuffer,_8KBLEN);	
@@ -1662,10 +1666,10 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 													//printf("Line:%d,%ld,read	 from dianxin [thread: %d],[second: %d, Microsecond: %d]\n\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 													//LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
 													//LOG(ERROR,"read from	dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-													LOG(ERROR,"[thread: %d],remoteBuffer=%s",m_uiThreadId,remoteBuffer);
+													//LOG(ERROR,"[thread: %d],remoteBuffer=%s",m_uiThreadId,remoteBuffer);
 													if( strlen(remoteBuffer) > 0 )
 													{					
-														
+														LOG(ERROR,"[thread: %d],read ok",m_uiThreadId);
 														mResValueRemote = std::string(remoteBuffer);	
 														printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
 														//LOG(ERROR,"[thread: %d],remoteBuffer=%s",m_uiThreadId,remoteBuffer);
@@ -1691,7 +1695,8 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 													 {
 														//iQueryCategory++;
 														errorMsg = "EE0009"; 
-														printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+														//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
+														LOG(ERROR,"[thread: %d],read error",m_uiThreadId);
 														stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
 														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 														CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
