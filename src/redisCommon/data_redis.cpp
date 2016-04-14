@@ -64,7 +64,7 @@ bool CDataRedis::Init(const char *host, unsigned short port, uint16_t idx) {
 
 bool CDataRedis::KeepConnect(uint32_t timeout) {
 	if (context_!=NULL) return true;
-	struct timeval st_timeout = {0, 800000}; // 1.5 seconds
+	struct timeval st_timeout = {0, 300000}; // 1.5 seconds
 	if(timeout) st_timeout.tv_usec = timeout;
 	context_ = redisConnectWithTimeout(host_, port_, st_timeout);
 	if (context_ == NULL || context_->err) {
