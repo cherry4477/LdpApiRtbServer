@@ -1664,11 +1664,16 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 													ut4=m_clEmTime.TimeGetMicSeconds();
 													//printf("Line:%d,current time : %ld,write	 to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st4-st3,ut4-ut3);
 													//printf("Line:%d,%ld,read	 from dianxin [thread: %d],[second: %d, Microsecond: %d]\n\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-													//LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
+													LOG(ERROR,"current time : %ld,read from dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st4-st3,ut4-ut3);
 													//LOG(ERROR,"read from	dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 													//LOG(ERROR,"[thread: %d],remoteBuffer=%s",m_uiThreadId,remoteBuffer);
 													if( strlen(remoteBuffer) > 0 )
 													{					
+														m_clEmTime.TimeOff();
+														
+														st3=m_clEmTime.TimeGetSeconds();
+														ut3=m_clEmTime.TimeGetMicSeconds();
+
 														LOG(ERROR,"[thread: %d],read ok",m_uiThreadId);
 														mResValueRemote = std::string(remoteBuffer);	
 														printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
@@ -1696,7 +1701,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 														//iQueryCategory++;
 														errorMsg = "EE0009"; 
 														//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
-														LOG(ERROR,"[thread: %d],read error",m_uiThreadId);
+														LOG(ERROR,"[thread: %d],read timeout",m_uiThreadId);
 														stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
 														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 														CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
