@@ -1637,7 +1637,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											std::vector<TASKCONNECT_S>::iterator itr;
 											for(itr = m_vevtorConnectPool.begin();itr!=m_vevtorConnectPool.end();itr++)
 											{
-												if(	itr->m_bStatus	==	true )
+												if(	itr->m_bStatus	==	true && itr->isConnect == 1)
 												{	
 													//printf("Line:%d,Thread:[ %5d ],find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
 													LOG(ERROR,"[thread: %d],find one connect....",m_uiThreadId);

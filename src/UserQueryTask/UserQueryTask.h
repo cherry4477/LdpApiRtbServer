@@ -71,6 +71,7 @@ typedef struct {
 typedef struct {
 	CTcpSocket *socket;
 	bool m_bStatus;
+	int isConnect;
 }TASKCONNECT_S;
 
 

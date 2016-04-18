@@ -502,6 +502,7 @@ void CUserQueryUpdate::Core()
 	BDXPERMISSSION_S mUserInfoVecFields;
 	std::string strUserName;
 	int times = 0;
+	int currentPool;
 	std::map<std::string,BDXPERMISSSION_S> temp_mapUserInfo;
 
 	std::string httpDianxinGet="/bdapi/restful/fog/asia/getSingleUserTags/ctyun_bdcsc_asia/1ebb3c5d8a574e74b2e6156a5c010cba.json?key=uid_m310001_3_1_20160315&tablename=vendoryx_2";
@@ -510,7 +511,7 @@ void CUserQueryUpdate::Core()
 		
 	while(true)
 	{
-		times=1;	
+		times=30;	
 		int first_row = 1;
 		#if 0
         if(m_pTokenRedis->UserGet(sts,strToken))
@@ -541,77 +542,86 @@ void CUserQueryUpdate::Core()
 
 	#ifdef __CONECT_POOL__
 			pthread_mutex_lock (&connectPoolMutex);
-			//printf("Line:%d,,InitConnectPool=%d,totalConnectPool=%d\n",__LINE__,InitConnectPool,totalConnectPool);
-			if ( InitConnectPool == 0 )
+			printf("Line:%d,,InitConnectPool=%d,totalConnectPool=%d,m_uiTotalThreadsNum=%d\n",__LINE__,InitConnectPool,totalConnectPool,m_uiTotalThreadsNum);
+			if ( InitConnectPool == 0 || (totalConnectPool < m_uiTotalThreadsNum))
 			{
-				for(int i = 0 ;i< m_uiTotalThreadsNum;i++)
+				currentPool = m_uiTotalThreadsNum - totalConnectPool;
+				printf("Line:%d,initing  pool.....\n",__LINE__);
+				for(int i = 0 ;i< currentPool;i++)
 				{
-					
 					//CTcpSocket *socket;
 					taskConnectPool.socket = new CTcpSocket(8080,std::string("111.235.158.136"));
+					//taskConnectPool.socket = new CTcpSocket(58001,std::string("0.0.0.0"));
 					if(taskConnectPool.socket->TcpConnect()==0)
 					{	
 						printf("Line:%d,connecting....\n",__LINE__);
 						taskConnectPool.m_bStatus = true;
+
 						sprintf(m_httpReq,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n",httpDianxinGet.c_str(),std::string("111.235.158.136:8080").c_str());
 						taskConnectPool.socket->TcpSetKeepAliveOn();
 						if(taskConnectPool.socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
 						{
+							taskConnectPool.isConnect = 1;
+							m_vevtorConnectPool.push_back(taskConnectPool);
+							totalConnectPool++;
 							memset(remoteBuffer,0,_8KBLEN);
 							taskConnectPool.socket->TcpRead(remoteBuffer,_8KBLEN);
 							strReceiveBuffer = std::string(remoteBuffer);
 							printf("Line:%d,strReceiveBuffer=%s\n",__LINE__,strReceiveBuffer.c_str());
 
 						}
-						taskConnectPool.socket->TcpGetScoketOpt();
-						m_vevtorConnectPool.push_back(taskConnectPool);
-						totalConnectPool++;
+						else
+						{
+							taskConnectPool.isConnect = 0;
+							taskConnectPool.socket->TcpClose();
+						}
 					}
 					else
 					{	
+						taskConnectPool.isConnect = 0;
 						taskConnectPool.socket->TcpClose();
 					}
-					
-					
 				}		
 				InitConnectPool = 1;
 			}
-			pthread_mutex_unlock(&connectPoolMutex);
-#endif
 
-		//printf("Line:%d,totalConnectPool=%d\n",__LINE__,totalConnectPool);
-		while(times--)
-		{
-			#ifndef __CONECT_POOL__
-			pthread_mutex_lock (&connectPoolMutex);
-
+		 	printf("Line:%d,m_vevtorConnectPool.size =%d\n",__LINE__,m_vevtorConnectPool.size());
 			std::vector<TASKCONNECT_S>::iterator itr;
 			for(itr = m_vevtorConnectPool.begin();itr!=m_vevtorConnectPool.end();itr++)
 			{
+				printf("Line:%d,checking  pool.....\n",__LINE__);
 				if( itr->m_bStatus	==	true )
 				{	
-					itr->m_bStatus = false;
-					printf("Line:%d,check tcp .....%d\n",__LINE__,itr->socket->TcpGetSocket());
-					itr->m_bStatus	=	false;
-					sprintf(m_httpReq,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n",httpDianxinGet.c_str(),std::string("111.235.158.136:8080").c_str());
-					taskConnectPool.socket->TcpSetKeepAliveOn();
-					if(taskConnectPool.socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
-					{
-						memset(remoteBuffer,0,_8KBLEN);
-						taskConnectPool.socket->TcpRead(remoteBuffer,_8KBLEN);
-						strReceiveBuffer = std::string(remoteBuffer);
-						printf("Line:%d,strReceiveBuffer=%s\n",__LINE__,strReceiveBuffer.c_str());
-					
-					}
+					 if(itr->isConnect == 1)
+					 {
+						 itr->m_bStatus  =	 false;
+						 sprintf(m_httpReq,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n",httpDianxinGet.c_str(),std::string("111.235.158.136:8080").c_str());
+						 itr->socket->TcpSetKeepAliveOn();
+						 if(itr->socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
+						 {
+							 memset(remoteBuffer,0,_8KBLEN);
+							 itr->socket->TcpRead(remoteBuffer,_8KBLEN);
+							 strReceiveBuffer = std::string(remoteBuffer);
+						 }
+						 else
+						 {
+							itr->isConnect = 0;
+							itr->socket->TcpClose();
+							m_vevtorConnectPool.erase(itr);
+							totalConnectPool--;
+						 }
+					 }
 					
 				}
 				itr->m_bStatus	=	true;
 			}
 
 			pthread_mutex_unlock(&connectPoolMutex);
-			
-			#endif
+	#endif
 
+		printf("Line:%d,totalConnectPool=%d\n",__LINE__,totalConnectPool);
+		while(times--)
+		{
 				temp_mapUserInfo.clear();
 				if(m_stMysqlServerInfo->GetMysqlInitState())
 				{
