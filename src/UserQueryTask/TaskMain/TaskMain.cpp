@@ -1640,7 +1640,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 												if(	itr->m_bStatus	==	true && itr->isConnect == 1)
 												{	
 													//printf("Line:%d,Thread:[ %5d ],find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
-													LOG(ERROR,"[thread: %d],find one connect....",m_uiThreadId);
+													//LOG(ERROR,"[thread: %d],find one connect....",m_uiThreadId);
 													itr->m_bStatus	=	false;
 													//totalConnectPool--;
 													break;
@@ -1710,7 +1710,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 														//iQueryCategory++;
 														errorMsg = "EE0009"; 
 														//printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
-														LOG(ERROR,"[thread: %d],read error",m_uiThreadId);
+														//LOG(ERROR,"[thread: %d],read error",m_uiThreadId);
 														stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
 														m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 														 
@@ -1732,6 +1732,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											}
 											else
 											{
+												errorMsg = "E0007";
 												LOG(ERROR,"[thread: %d],write error",m_uiThreadId);
 												itr->m_bStatus = true;	
 												//totalConnectPool++;
@@ -1742,13 +1743,12 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 										}
 										else
 										{							
-											printf("Line:%d,connect pool is not enough....\n",__LINE__);
-											LOG(ERROR,"[thread: %d],connect pool is not enough",m_uiThreadId);
+											//printf("Line:%d,connect pool is not enough....\n",__LINE__);
+											//LOG(ERROR,"[thread: %d],connect pool is not enough",m_uiThreadId);
 											remoteSocket=new CTcpSocket(remotePort,remoteIp);
 											if(remoteSocket->TcpConnect()!=0)
 											{						
 												errorMsg = "EE0009"; 
-												printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 												stResponseInfo.ssOperatorNameKeyReqError=stResponseInfo.ssOperatorNameKeyReq+"_"+errorMsg;
 												m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 												CUserQueryWorkThreads::m_vecReport[m_uiThreadId].m_strUserInfo[stResponseInfo.ssOperatorName].m_ullResErrorNum++;
@@ -1757,7 +1757,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 												m_pDataRedis->UserIncr(stResponseInfo.ssOperatorNameKeyReqError);
 												
 												errorMsg = "E0007";
-												LOG(ERROR,"connect remote api error ,[thread: %d],errorCode %s ",m_uiThreadId,errorMsg.c_str());
+												//LOG(ERROR,"connect remote api error ,[thread: %d],errorCode %s ",m_uiThreadId,errorMsg.c_str());
 												printf("line %d,s Error: %s\n",__LINE__,errorMsg.c_str());
 												stResponseInfo.ssUserCountKeyReqError=stResponseInfo.ssUserCountKeyReq+"_"+errorMsg;		
 												m_pDataRedis->UserIncr(stResponseInfo.ssUserCountKeyReqError);
@@ -1773,7 +1773,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											ut2=m_clEmTime.TimeGetMicSeconds();
 											//printf("Line:%d,current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,st2-st1,ut2-ut1);	
 											//printf("Line:%d,%ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",__LINE__,time(0),m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
-											LOG(ERROR,"current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st2-st1,ut2-ut1);
+											//LOG(ERROR,"current time : %ld,connect to  dianxin [thread: %d],[second: %d, Microsecond: %d]\n",time(0),m_uiThreadId,st2-st1,ut2-ut1);
 											//LOG(ERROR,"connect dianxin ,times= %d,##[thread: %d],[second: %d, Microsecond: %d]",queryTimes,m_uiThreadId,m_clEmTime.TimeGetSeconds(), m_clEmTime.TimeGetMicSeconds());
 											if(remoteSocket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
 											{
@@ -1799,7 +1799,7 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 													
 													mResValueRemote = std::string(remoteBuffer);	
 													//printf("Line:%d,remoteBuffer=%s\n",__LINE__,remoteBuffer);
-													LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
+													//LOG(DEBUG,"remoteBuffer=%s",remoteBuffer);
 													stResponseInfo.mResValue = std::string(remoteBuffer);
 													signError = "\"code\":500,\"status\":\"FAIL\",\"message\":\"SAuthRss : Sign is wrong";
 													//printf("queryTimes=%d\n",queryTimes);

@@ -212,8 +212,8 @@ bool CLog::LogCreatLogDir()
 			fclose(m_pFile);
 			m_pFile = NULL;
 		}
-		//std::string strFileName = strLogDir + "/" + std::string(m_pszFileName) + toString(m_iLogFileId)+"."+std::string(randomchar);
-		std::string strFileName = strLogDir + "/" + std::string(m_pszFileName) + toString(m_iLogFileId);
+		std::string strFileName = strLogDir + "/" + std::string(m_pszFileName) + toString(m_iLogFileId)+"."+std::string(randomchar);
+		//std::string strFileName = strLogDir + "/" + std::string(m_pszFileName) + toString(m_iLogFileId);
 		m_pFile = fopen(strFileName.c_str(), "a");
 		if(m_pFile == NULL) return false;
 		m_iLogFileId ++;
