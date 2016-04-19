@@ -542,7 +542,7 @@ void CUserQueryUpdate::Core()
 
 	#ifdef __CONECT_POOL__
 			pthread_mutex_lock (&connectPoolMutex);
-			printf("Line:%d,,InitConnectPool=%d,totalConnectPool=%d,m_uiTotalThreadsNum=%d\n",__LINE__,InitConnectPool,totalConnectPool,m_uiTotalThreadsNum);
+			printf("Line:%d,,BEGIN CHECK InitConnectPool=%d,totalConnectPool=%d,m_uiTotalThreadsNum=%d\n",__LINE__,InitConnectPool,totalConnectPool,m_uiTotalThreadsNum);
 			if ( InitConnectPool == 0 || (totalConnectPool < m_uiTotalThreadsNum))
 			{
 				currentPool = m_uiTotalThreadsNum - totalConnectPool;
@@ -585,11 +585,11 @@ void CUserQueryUpdate::Core()
 				InitConnectPool = 1;
 			}
 
+			printf("Line:%d,,AFTER CHECK InitConnectPool=%d,totalConnectPool=%d,m_uiTotalThreadsNum=%d\n",__LINE__,InitConnectPool,totalConnectPool,m_uiTotalThreadsNum);
 		 	printf("Line:%d,m_vevtorConnectPool.size =%d\n",__LINE__,m_vevtorConnectPool.size());
 			std::vector<TASKCONNECT_S>::iterator itr;
 			for(itr = m_vevtorConnectPool.begin();itr!=m_vevtorConnectPool.end();itr++)
 			{
-				printf("Line:%d,checking  pool.....\n",__LINE__);
 				if( itr->m_bStatus	==	true )
 				{	
 					 if(itr->isConnect == 1)
@@ -605,6 +605,8 @@ void CUserQueryUpdate::Core()
 						 }
 						 else
 						 {
+						 	printf("Line:%d,checking  pool.....error\n",__LINE__);
+							printf("Line:%d,totalConnectPool  =%d\n",__LINE__,totalConnectPool);
 							itr->isConnect = 0;
 							itr->socket->TcpClose();
 							m_vevtorConnectPool.erase(itr);
