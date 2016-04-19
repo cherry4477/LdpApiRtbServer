@@ -607,6 +607,7 @@ void CUserQueryUpdate::Core()
 						 {
 						 	printf("Line:%d,checking  pool.....error\n",__LINE__);
 							printf("Line:%d,totalConnectPool  =%d\n",__LINE__,totalConnectPool);
+							printf("Line:%d,m_vevtorConnectPool.size=%d\n",__LINE__,m_vevtorConnectPool.size());
 							itr->isConnect = 0;
 							itr->socket->TcpClose();
 							m_vevtorConnectPool.erase(itr);
