@@ -511,7 +511,7 @@ void CUserQueryUpdate::Core()
 		
 	while(true)
 	{
-		times=30;	
+		times=15;	
 		int first_row = 1;
 		#if 0
         if(m_pTokenRedis->UserGet(sts,strToken))
