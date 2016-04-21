@@ -1642,7 +1642,6 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 													//printf("Line:%d,Thread:[ %5d ],find one connect.....%d\n",__LINE__,m_uiThreadId,itr->socket->TcpGetSocket());
 													//LOG(ERROR,"[thread: %d],find one connect....",m_uiThreadId);
 													itr->m_bStatus	=	false;
-													//totalConnectPool--;
 													break;
 												}
 											}
@@ -1694,13 +1693,11 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 														if(queryTimes<=3&&stResponseInfo.mResValue.find(signError)!=std::string::npos)
 														{
 															itr->m_bStatus = true;
-															//totalConnectPool++;
 															goto Label;
 														}
 														else
 														{
 															itr->m_bStatus = true;
-															//totalConnectPool++;
 														}
 											
 														
@@ -1734,7 +1731,8 @@ int CTaskMain::BdxGetHttpPacket(BDXREQUEST_S& stRequestInfo,BDXRESPONSE_S &stRes
 											{
 												errorMsg = "E0007";
 												LOG(ERROR,"[thread: %d],write error",m_uiThreadId);
-												itr->m_bStatus = true;	
+												itr->m_bStatus = true;
+												itr->isConnect = 0;
 												//totalConnectPool++;
 												delete jReader;						
 												return ERRORNODATA;						

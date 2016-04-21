@@ -511,7 +511,7 @@ void CUserQueryUpdate::Core()
 		
 	while(true)
 	{
-		times=15;	
+		times=5;	 //check http connect every 7 minute
 		int first_row = 1;
 		#if 0
         if(m_pTokenRedis->UserGet(sts,strToken))
@@ -542,6 +542,7 @@ void CUserQueryUpdate::Core()
 
 	#ifdef __CONECT_POOL__
 			pthread_mutex_lock (&connectPoolMutex);
+	
 			printf("Line:%d,,BEGIN CHECK InitConnectPool=%d,totalConnectPool=%d,m_uiTotalThreadsNum=%d\n",__LINE__,InitConnectPool,totalConnectPool,m_uiTotalThreadsNum);
 			if ( InitConnectPool == 0 || (totalConnectPool < m_uiTotalThreadsNum))
 			{
@@ -554,21 +555,26 @@ void CUserQueryUpdate::Core()
 					//taskConnectPool.socket = new CTcpSocket(58001,std::string("0.0.0.0"));
 					if(taskConnectPool.socket->TcpConnect()==0)
 					{	
-						printf("Line:%d,connecting....\n",__LINE__);
+						//printf("Line:%d,connecting....\n",__LINE__);
 						taskConnectPool.m_bStatus = true;
 
 						sprintf(m_httpReq,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: identity\r\n\r\n",httpDianxinGet.c_str(),std::string("111.235.158.136:8080").c_str());
 						taskConnectPool.socket->TcpSetKeepAliveOn();
 						if(taskConnectPool.socket->TcpWrite(m_httpReq,strlen(m_httpReq))!=0)
 						{
-							taskConnectPool.isConnect = 1;
-							m_vevtorConnectPool.push_back(taskConnectPool);
-							totalConnectPool++;
+
 							memset(remoteBuffer,0,_8KBLEN);
 							taskConnectPool.socket->TcpRead(remoteBuffer,_8KBLEN);
 							strReceiveBuffer = std::string(remoteBuffer);
 							printf("Line:%d,strReceiveBuffer=%s\n",__LINE__,strReceiveBuffer.c_str());
 
+							if(strReceiveBuffer.length()>0)
+							{
+								taskConnectPool.isConnect = 1;
+								m_vevtorConnectPool.push_back(taskConnectPool);
+								totalConnectPool++;
+
+							}							
 						}
 						else
 						{
@@ -580,6 +586,7 @@ void CUserQueryUpdate::Core()
 					{	
 						taskConnectPool.isConnect = 0;
 						taskConnectPool.socket->TcpClose();
+						
 					}
 				}		
 				InitConnectPool = 1;
@@ -602,6 +609,18 @@ void CUserQueryUpdate::Core()
 							 memset(remoteBuffer,0,_8KBLEN);
 							 itr->socket->TcpRead(remoteBuffer,_8KBLEN);
 							 strReceiveBuffer = std::string(remoteBuffer);
+							 printf("Line:%d,strReceiveBuffer=%s\n",__LINE__,strReceiveBuffer.c_str());
+							if(strReceiveBuffer.length()<5)
+							{
+								itr->isConnect = 0;
+								itr->socket->TcpClose();
+								m_vevtorConnectPool.erase(itr);
+								totalConnectPool--;
+								printf("Line:%d,m_vevtorConnectPool.size=%d\n",__LINE__,m_vevtorConnectPool.size());
+								
+
+
+							}
 						 }
 						 else
 						 {
@@ -611,6 +630,8 @@ void CUserQueryUpdate::Core()
 							itr->isConnect = 0;
 							itr->socket->TcpClose();
 							m_vevtorConnectPool.erase(itr);
+
+							printf("Line:%d,m_vevtorConnectPool.size=%d\n",__LINE__,m_vevtorConnectPool.size());
 							totalConnectPool--;
 						 }
 					 }
@@ -618,6 +639,7 @@ void CUserQueryUpdate::Core()
 				}
 				itr->m_bStatus	=	true;
 			}
+
 
 			pthread_mutex_unlock(&connectPoolMutex);
 	#endif
